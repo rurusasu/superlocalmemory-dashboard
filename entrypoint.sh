@@ -84,5 +84,9 @@ slm profile switch openclaw 2>&1 || {
 echo "[SLM] Status:"
 slm status 2>&1 || echo "[SLM] Warning: status check returned error"
 
+# Dashboard startup
+echo "[SLM] Starting dashboard on port 3002..."
+PORT=3002 HOSTNAME=0.0.0.0 node /app/dashboard/server.js &
+
 echo "[SLM] Starting MCP server on port 3000 via supergateway (Mode $SLM_MODE)..."
 exec npx -y supergateway --stdio "slm mcp" --outputTransport streamableHttp --port 3000 --host 0.0.0.0
