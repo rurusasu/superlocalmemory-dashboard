@@ -1,0 +1,6 @@
+dashboard/node_modules
+dashboard/.next
+.git
+.github
+README.md
+tests
