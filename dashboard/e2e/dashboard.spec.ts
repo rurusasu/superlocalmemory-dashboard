@@ -28,6 +28,12 @@ async function gotoApp(page: Page) {
   await page.goto('/dashboard')
 }
 
+async function gotoConversations(page: Page) {
+  await page.goto('/dashboard')
+  await page.getByRole('button', { name: 'Conversations' }).click()
+  await page.getByPlaceholder('Search conversations...').waitFor()
+}
+
 async function mockAllApis(page: Page) {
   await page.route('**/dashboard/api/health', (route) => route.fulfill({ json: healthData }))
   await page.route('**/dashboard/api/stats', (route) => route.fulfill({ json: statsData }))
@@ -158,7 +164,7 @@ test.describe('Search and filter', () => {
    */
   test('searches by pressing Enter', async ({ page }) => {
     await mockAllApis(page)
-    await gotoApp(page)
+    await gotoConversations(page)
 
     await expect(page.getByText('Conversation content number 1 for testing')).toBeVisible()
 
@@ -176,7 +182,7 @@ test.describe('Search and filter', () => {
    */
   test('searches by clicking Search button', async ({ page }) => {
     await mockAllApis(page)
-    await gotoApp(page)
+    await gotoConversations(page)
 
     const input = page.getByPlaceholder('Search conversations...')
     await input.fill('matching')
@@ -192,7 +198,7 @@ test.describe('Search and filter', () => {
    */
   test('filters conversations by source', async ({ page }) => {
     await mockAllApis(page)
-    await gotoApp(page)
+    await gotoConversations(page)
 
     await expect(page.getByText('Conversation content number 1 for testing')).toBeVisible()
 
@@ -215,7 +221,7 @@ test.describe('Pagination', () => {
    */
   test('navigates between pages with Next and Previous', async ({ page }) => {
     await mockAllApis(page)
-    await gotoApp(page)
+    await gotoConversations(page)
 
     await expect(page.getByText('Conversation content number 1 for testing')).toBeVisible()
 
@@ -239,7 +245,7 @@ test.describe('Pagination', () => {
    */
   test('disables Previous button on first page', async ({ page }) => {
     await mockAllApis(page)
-    await gotoApp(page)
+    await gotoConversations(page)
 
     await expect(page.getByText('Conversation content number 1 for testing')).toBeVisible()
 
@@ -254,23 +260,29 @@ test.describe('Sidebar', () => {
    * Why:  ユーザーが現在のセクションを視覚的に把握するための UI フィードバック。
    * Risk: activeSection の state 管理不具合でアクティブ表示が更新されない。
    */
-  test('switches active navigation item on click', async ({ page }) => {
+  test('switches active navigation item and content on click', async ({ page }) => {
     await mockAllApis(page)
     await gotoApp(page)
 
     const dashboardNav = page.getByRole('button', { name: 'Dashboard' })
     const conversationsNav = page.getByRole('button', { name: 'Conversations' })
-    const healthNav = page.getByRole('button', { name: 'System Health' })
 
+    // Dashboard tab is active by default, health cards visible
     await expect(dashboardNav).toHaveClass(/bg-blue-600/)
+    await expect(page.locator('#section-health')).toBeVisible()
+    await expect(page.getByPlaceholder('Search conversations...')).toBeHidden()
 
+    // Switch to Conversations tab
     await conversationsNav.click()
     await expect(conversationsNav).toHaveClass(/bg-blue-600/)
     await expect(dashboardNav).not.toHaveClass(/bg-blue-600/)
+    await expect(page.getByPlaceholder('Search conversations...')).toBeVisible()
+    await expect(page.locator('#section-health')).toBeHidden()
 
-    await healthNav.click()
-    await expect(healthNav).toHaveClass(/bg-blue-600/)
-    await expect(conversationsNav).not.toHaveClass(/bg-blue-600/)
+    // Switch back to Dashboard
+    await dashboardNav.click()
+    await expect(dashboardNav).toHaveClass(/bg-blue-600/)
+    await expect(page.locator('#section-health')).toBeVisible()
   })
 
   /**
@@ -429,7 +441,10 @@ test.describe('Settings and language', () => {
 
     // Verify nav labels translated
     await expect(page.getByRole('button', { name: 'ダッシュボード' })).toBeVisible()
-    await expect(page.getByPlaceholder('会話を検索...')).toBeVisible()
+    await expect(page.getByRole('button', { name: '会話検索・一覧' })).toBeVisible()
+
+    // Verify status card labels translated
+    await expect(page.getByText('ステータス')).toBeVisible()
 
     // Verify status values translated
     await expect(healthSection.getByText('正常').first()).toBeVisible()

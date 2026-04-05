@@ -4,7 +4,6 @@ export const translations: Record<Locale, Record<string, string>> = {
   en: {
     'nav.dashboard': 'Dashboard',
     'nav.conversations': 'Conversations',
-    'nav.health': 'System Health',
     'nav.settings': 'Settings',
     'header.profile': 'Profile',
     'health.status': 'Status',
@@ -42,7 +41,6 @@ export const translations: Record<Locale, Record<string, string>> = {
   ja: {
     'nav.dashboard': 'ダッシュボード',
     'nav.conversations': '会話検索・一覧',
-    'nav.health': 'システム状態',
     'nav.settings': '設定',
     'header.profile': 'プロファイル',
     'health.status': 'ステータス',
