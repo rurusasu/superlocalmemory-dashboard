@@ -23,7 +23,7 @@ beforeEach(() => {
     'fetch',
     vi.fn().mockResolvedValue({
       json: async () => ({ conversations: [], count: 0 }),
-    })
+    }),
   )
 })
 
@@ -35,9 +35,7 @@ describe('DashboardPage', () => {
    */
   it('renders the dashboard heading', () => {
     render(<DashboardPage />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'SLM Dashboard'
-    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('SLM Dashboard')
   })
 
   /**

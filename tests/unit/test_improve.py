@@ -33,10 +33,12 @@ def test_generate_improvement_success(mock_post):
     """
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "response": json.dumps({
-            "diff": "--- a/SKILL.md\n+++ b/SKILL.md\n@@ -1 +1 @@\n-old\n+new",
-            "rationale": "Fixed error handling",
-        })
+        "response": json.dumps(
+            {
+                "diff": "--- a/SKILL.md\n+++ b/SKILL.md\n@@ -1 +1 @@\n-old\n+new",
+                "rationale": "Fixed error handling",
+            }
+        )
     }
     mock_response.raise_for_status = MagicMock()
     mock_post.return_value = mock_response
@@ -125,9 +127,7 @@ def test_generate_improvement_truncates_large_content(mock_post):
           または Ollama プロセスが OOM で強制終了する。
     """
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "response": json.dumps({"diff": "", "rationale": "ok"})
-    }
+    mock_response.json.return_value = {"response": json.dumps({"diff": "", "rationale": "ok"})}
     mock_response.raise_for_status = MagicMock()
     mock_post.return_value = mock_response
 
@@ -153,9 +153,7 @@ def test_generate_improvement_limits_failures(mock_post):
           または LLM が大量のノイズに埋もれて的外れな提案を返す。
     """
     mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "response": json.dumps({"diff": "", "rationale": "ok"})
-    }
+    mock_response.json.return_value = {"response": json.dumps({"diff": "", "rationale": "ok"})}
     mock_response.raise_for_status = MagicMock()
     mock_post.return_value = mock_response
 

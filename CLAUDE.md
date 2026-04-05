@@ -23,14 +23,24 @@ SLM is a memory management system that integrates with Ollama for local LLM infe
 
 ## Development Notes
 - **Dashboard tests**: Vitest — run `npm test` in `dashboard/`
-- **Python tests**: pytest — run `python -m pytest tests/ -v` from project root
-- No linter is configured yet.
-- CI/CD: GitHub Actions builds and pushes Docker image to Docker Hub on `main` push.
+- **Python tests**: pytest — run `python -m pytest tests/unit/ -v` from project root
 - The container runs as non-root user `node` (UID 1000).
 - Python scripts in `skills_tools/` are pure library modules (no CLI entrypoints).
+
+## Linting
+- **Dockerfile**: hadolint (config: `.hadolint.yaml`)
+- **TypeScript/JSX**: ESLint — `npm run lint` in `dashboard/`
+- **Formatting (TS)**: Prettier — `npm run format:check` in `dashboard/`
+- **Python**: Ruff (check + format) — `ruff check skills_tools/ tests/` and `ruff format --check skills_tools/ tests/`
+- Ruff config is in `pyproject.toml` (`line-length = 100`, rules: E, F, W, I, UP)
+
+## CI/CD (GitHub Actions)
+- **CI** (`ci.yml`): push/PR to `main` → Lint (hadolint, ESLint, Prettier, Ruff) → Test (Vitest, pytest, tsc, build). Lint jobs run in parallel; test jobs depend on their respective lint jobs passing.
+- **Security** (`security.yml`): `v*` tag + weekly schedule → Trivy config/filesystem scan, npm audit, SARIF → GitHub Security tab.
+- **Docker** (`docker-publish.yml`): `v*` tag only → Build → Smoke test → Trivy image scan → Push to Docker Hub. Does NOT run on push to main or PRs.
 
 ## Building & Testing the Docker Image
 ```bash
 docker build -t superlocalmemory-dashboard .
-docker run --rm -p 3000:3000 -e SLM_MODE=b superlocalmemory-dashboard
+docker run --rm -p 3000:3000 -p 3002:3002 -e SLM_MODE=b superlocalmemory-dashboard
 ```

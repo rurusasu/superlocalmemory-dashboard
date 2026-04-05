@@ -5,3 +5,4 @@ __pycache__/
 .ruff_cache/
 superlocalmemory-*.tgz
 node_modules/
+.claude/settings.local.json
