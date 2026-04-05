@@ -1,29 +1,15 @@
 /**
  * Unit tests for GET /api/conversations
- *
- * What: 会話一覧/検索APIが、クエリパラメータを正しく解釈し、
- *       slm CLI を適切な引数で呼び出し、結果を JSON で返すことを検証する。
- *
- * Why:  このエンドポイントはダッシュボードの主要データソースであり、
- *       ユーザー入力（検索クエリ）を受け取ってシェルコマンドに渡す。
- *       パラメータの解釈ミスやエラーハンドリングの不備は、
- *       データ表示の不具合やセキュリティリスクに直結する。
- *
- * Risk if failing:
- *   - 検索機能が動作せず、ユーザーが会話を検索できなくなる
- *   - limit パラメータが無視され、大量データ取得でパフォーマンスが劣化する
- *   - slm コマンド失敗時にAPIが未処理例外で落ちる
- *   - ダブルクォートのエスケープ漏れでシェルコマンドが壊れる
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockExecSync } = vi.hoisted(() => ({
-  mockExecSync: vi.fn(),
+const { mockExecFileSync } = vi.hoisted(() => ({
+  mockExecFileSync: vi.fn(),
 }))
 
 vi.mock('child_process', () => ({
-  default: { execSync: mockExecSync },
-  execSync: mockExecSync,
+  default: { execFileSync: mockExecFileSync },
+  execFileSync: mockExecFileSync,
 }))
 
 import { GET } from '@/app/api/conversations/route'
@@ -41,71 +27,45 @@ function makeRequest(params: Record<string, string> = {}): Request {
 }
 
 describe('GET /api/conversations', () => {
-  /**
-   * What: クエリパラメータなしの場合、`slm list` を実行し会話データを返す。
-   * Why:  ダッシュボード初期表示の基本動作。デフォルトで最新50件を取得する。
-   * Risk: 初期表示で会話が一切表示されず、ユーザーがシステム障害と誤認する。
-   */
   it('returns conversations from slm list when no query', async () => {
-    const mockData = [
-      { id: '1', content: 'hello', source: 'test', timestamp: '2024-01-01' },
-    ]
-    mockExecSync.mockReturnValue(Buffer.from(JSON.stringify(mockData)))
+    const mockData = [{ id: '1', content: 'hello', source: 'test', timestamp: '2024-01-01' }]
+    mockExecFileSync.mockReturnValue(Buffer.from(JSON.stringify(mockData)))
 
     const response = await GET(makeRequest())
     const data = await response.json()
 
     expect(data.conversations).toEqual(mockData)
     expect(data.count).toBe(1)
-    expect(mockExecSync).toHaveBeenCalledWith(
-      'slm list --limit 50 --json',
-      { timeout: 10000 }
-    )
+    // Fetches offset(0) + limit(50) + 1 = 51
+    expect(mockExecFileSync).toHaveBeenCalledWith('slm', ['list', '--limit', '51', '--json'], {
+      timeout: 10000,
+    })
   })
 
-  /**
-   * What: `q` パラメータが指定された場合、`slm search` に切り替わる。
-   * Why:  list と search の分岐ロジックが正しく動作しないと、
-   *       検索しても全件表示されたり、逆に一覧が検索結果になる。
-   * Risk: 検索機能が完全に使えなくなる。
-   */
   it('uses slm search when query is provided', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('[]'))
+    mockExecFileSync.mockReturnValue(Buffer.from('[]'))
 
     await GET(makeRequest({ q: 'test query' }))
 
-    expect(mockExecSync).toHaveBeenCalledWith(
-      'slm search "test query" --limit 50 --json',
-      { timeout: 10000 }
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      'slm',
+      ['search', 'test query', '--limit', '51', '--json'],
+      { timeout: 10000 },
     )
   })
 
-  /**
-   * What: `limit` パラメータが slm コマンドの --limit 引数に正しく反映される。
-   * Why:  大量データ環境でフロントエンドがページサイズを指定できる必要がある。
-   * Risk: limit が無視されデフォルトの50件が常に返され、
-   *       ページネーション実装時に件数制御ができなくなる。
-   */
   it('respects limit parameter', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('[]'))
+    mockExecFileSync.mockReturnValue(Buffer.from('[]'))
 
     await GET(makeRequest({ limit: '10' }))
 
-    expect(mockExecSync).toHaveBeenCalledWith(
-      'slm list --limit 10 --json',
-      { timeout: 10000 }
-    )
+    expect(mockExecFileSync).toHaveBeenCalledWith('slm', ['list', '--limit', '11', '--json'], {
+      timeout: 10000,
+    })
   })
 
-  /**
-   * What: slm コマンドが異常終了した場合、HTTP 500 とエラーメッセージを返す。
-   * Why:  slm 未インストール・タイムアウト等の障害時にクライアントが
-   *       エラー原因を把握できる必要がある。
-   * Risk: 未処理例外でプロセスクラッシュ、またはエラー情報なしの空レスポンスが返り、
-   *       デバッグが困難になる。
-   */
-  it('returns 500 when execSync throws', async () => {
-    mockExecSync.mockImplementation(() => {
+  it('returns 500 when execFileSync throws', async () => {
+    mockExecFileSync.mockImplementation(() => {
       throw new Error('slm not found')
     })
 
@@ -118,35 +78,123 @@ describe('GET /api/conversations', () => {
     expect(data.count).toBe(0)
   })
 
-  /**
-   * What: slm が不正な JSON を返した場合、HTTP 500 を返す。
-   * Why:  slm のバージョン不一致や出力形式変更で JSON パースが失敗する場合がある。
-   *       これを適切に処理しないとクライアントが壊れたデータを受け取る。
-   * Risk: JSON.parse の例外が未処理でAPIがクラッシュする。
-   */
   it('returns 500 when slm returns invalid JSON', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('not json'))
+    mockExecFileSync.mockReturnValue(Buffer.from('not json'))
 
     const response = await GET(makeRequest())
 
     expect(response.status).toBe(500)
   })
 
-  /**
-   * What: 検索クエリ内のダブルクォートが適切にエスケープされる。
-   * Why:  ユーザー入力にダブルクォートが含まれると、シェルコマンドの
-   *       文字列リテラルが壊れ、構文エラーやコマンドインジェクションの原因になる。
-   * Risk: クォートを含む検索でコマンドが構文エラーになり検索不能になる。
-   *       最悪の場合、コマンドインジェクション脆弱性につながる。
-   */
-  it('escapes double quotes in query', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('[]'))
+  it('passes quotes as literal characters in args', async () => {
+    mockExecFileSync.mockReturnValue(Buffer.from('[]'))
 
     await GET(makeRequest({ q: 'test "quoted"' }))
 
-    expect(mockExecSync).toHaveBeenCalledWith(
-      expect.stringContaining('\\"quoted\\"'),
-      { timeout: 10000 }
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      'slm',
+      ['search', 'test "quoted"', '--limit', '51', '--json'],
+      { timeout: 10000 },
     )
+  })
+
+  describe('pagination', () => {
+    it('returns pagination metadata', async () => {
+      const items = Array.from({ length: 3 }, (_, i) => ({
+        id: String(i),
+        content: `c${i}`,
+        source: 's',
+        timestamp: 't',
+      }))
+      mockExecFileSync.mockReturnValue(Buffer.from(JSON.stringify(items)))
+
+      const response = await GET(makeRequest({ limit: '10', offset: '0' }))
+      const data = await response.json()
+
+      expect(data.offset).toBe(0)
+      expect(data.limit).toBe(10)
+      expect(data.hasMore).toBe(false)
+      expect(data.total).toBe(3)
+      expect(data.count).toBe(3)
+    })
+
+    it('sets hasMore when more results exist', async () => {
+      // limit=2, offset=0, so fetchLimit=3. Return 3 items -> hasMore=true
+      const items = Array.from({ length: 3 }, (_, i) => ({ id: String(i) }))
+      mockExecFileSync.mockReturnValue(Buffer.from(JSON.stringify(items)))
+
+      const response = await GET(makeRequest({ limit: '2', offset: '0' }))
+      const data = await response.json()
+
+      expect(data.hasMore).toBe(true)
+      expect(data.conversations).toHaveLength(2)
+    })
+
+    it('applies offset correctly', async () => {
+      const items = Array.from({ length: 5 }, (_, i) => ({ id: String(i) }))
+      mockExecFileSync.mockReturnValue(Buffer.from(JSON.stringify(items)))
+
+      const response = await GET(makeRequest({ limit: '2', offset: '2' }))
+      const data = await response.json()
+
+      expect(data.conversations).toEqual([{ id: '2' }, { id: '3' }])
+      expect(data.offset).toBe(2)
+    })
+  })
+
+  describe('command injection prevention', () => {
+    it.each(['; rm -rf /', '| cat /etc/passwd', '&& malicious', '$(whoami)', '`whoami`'])(
+      'safely handles shell metacharacter: %s',
+      async (malicious) => {
+        mockExecFileSync.mockReturnValue(Buffer.from('[]'))
+
+        const response = await GET(makeRequest({ q: malicious }))
+
+        expect(response.status).toBe(200)
+        expect(mockExecFileSync).toHaveBeenCalledWith('slm', expect.arrayContaining([malicious]), {
+          timeout: 10000,
+        })
+      },
+    )
+
+    it('truncates queries exceeding 200 characters', async () => {
+      mockExecFileSync.mockReturnValue(Buffer.from('[]'))
+      const longQuery = 'a'.repeat(300)
+
+      await GET(makeRequest({ q: longQuery }))
+
+      const args = mockExecFileSync.mock.calls[0][1] as string[]
+      expect(args[1].length).toBe(200)
+    })
+
+    it('strips control characters from query', async () => {
+      mockExecFileSync.mockReturnValue(Buffer.from('[]'))
+
+      await GET(makeRequest({ q: 'hello\x00world\x1f!' }))
+
+      expect(mockExecFileSync).toHaveBeenCalledWith(
+        'slm',
+        ['search', 'helloworld!', '--limit', '51', '--json'],
+        { timeout: 10000 },
+      )
+    })
+
+    it.each([
+      ['-1', '51'],
+      ['0', '51'],
+      ['abc', '51'],
+      ['NaN', '51'],
+      ['9999', '1001'],
+    ])('handles invalid limit "%s" -> fetches %s', async (input, expected) => {
+      mockExecFileSync.mockReturnValue(Buffer.from('[]'))
+
+      await GET(makeRequest({ limit: input }))
+
+      expect(mockExecFileSync).toHaveBeenCalledWith(
+        'slm',
+        ['list', '--limit', expected, '--json'],
+        { timeout: 10000 },
+      )
+    })
   })
 })
