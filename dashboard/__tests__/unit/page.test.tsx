@@ -41,17 +41,19 @@ describe('DashboardPage', () => {
   })
 
   /**
-   * What: Status, Ollama, Database, Disk Usage の4つのステータスカードが描画される。
+   * What: Status, Ollama, Database, Facts, Entities, Disk の6つのステータスカードが描画される。
    * Why:  これらはシステムの稼働状況を一目で把握するための主要情報。
    *       1つでも欠落すると、障害の兆候を見逃す可能性がある。
    * Risk: カードが欠落してOllama切断やDB消失に気づけず、対応が遅れる。
    */
-  it('renders all four health status cards', () => {
+  it('renders all six health status cards', () => {
     render(<DashboardPage />)
     expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Database').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Disk Usage').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Facts').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Entities').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Disk').length).toBeGreaterThanOrEqual(1)
   })
 
   /**
@@ -76,7 +78,7 @@ describe('DashboardPage', () => {
    */
   it('shows loading state initially', () => {
     render(<DashboardPage />)
-    const loadingTexts = screen.getAllByText('loading...')
+    const loadingTexts = screen.getAllByText('...')
     expect(loadingTexts.length).toBeGreaterThanOrEqual(1)
   })
 })
