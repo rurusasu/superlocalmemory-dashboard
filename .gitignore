@@ -8,8 +8,5 @@ node_modules/
 .claude/settings.local.json
 .aidesigner/*
 !.aidesigner/.gitkeep
-.agents/
-.claude/
-.mcp.json
 .playwright-mcp/
 *.png
