@@ -56,7 +56,7 @@ Docker containerized Node.js application that serves as a **dashboard and MCP ga
 | Workflow | Trigger | What it does |
 |---|---|---|
 | **CI** | push / PR to `main` | Lint (hadolint · ESLint · Prettier · Ruff) → Test (Vitest · pytest · tsc · build) |
-| **Docker** | push to `main` / `v*` tag / weekly | Build + Smoke test (main)。Security + Build → Trivy scan → Push (tag)。Security のみ (weekly) |
+| **Docker** | push to `main` / `v*` tag / weekly | Security → Build + Smoke test (main)。Security → Build → Image scan → Push (tag)。Security のみ (weekly) |
 
 ```
 push / PR to main
@@ -65,14 +65,16 @@ push / PR to main
   │             ├ ESLint            ├ pytest + coverage
   │             ├ Prettier          └ Next.js build
   │             └ Ruff
-  └─► Docker ─► Build → Smoke Test ─► ✅
+  └─► Docker ─► Security (parallel) ─► Build → Smoke Test ─► ✅
+                ├ Trivy config
+                ├ Trivy filesystem
+                └ npm audit
 
 v* tag
-  └─► Docker ─┬► Security (parallel)  ─┐
-              │  ├ Trivy config         │
-              │  ├ Trivy filesystem     ├─► All pass ─► Push
-              │  └ npm audit            │
-              └► Build → Trivy image ───┘
+  └─► Docker ─► Security (parallel) ─► Build ─► Trivy image ─► Push
+                ├ Trivy config
+                ├ Trivy filesystem
+                └ npm audit
 
 weekly (Monday 09:00 UTC)
   └─► Docker ─► Security only → GitHub Security tab
