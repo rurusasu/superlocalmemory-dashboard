@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import DashboardPage from '@/app/page'
+import { LocaleProvider } from '@/app/i18n/LocaleContext'
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -34,7 +35,11 @@ describe('DashboardPage', () => {
    * Risk: タイトルが消え、ユーザーがどのページにいるか分からなくなる。
    */
   it('renders the dashboard heading', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('SLM Dashboard')
   })
 
@@ -45,7 +50,11 @@ describe('DashboardPage', () => {
    * Risk: カードが欠落してOllama切断やDB消失に気づけず、対応が遅れる。
    */
   it('renders all six health status cards', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Database').length).toBeGreaterThanOrEqual(1)
@@ -61,7 +70,11 @@ describe('DashboardPage', () => {
    * Risk: 検索機能にアクセスできず、大量の会話データから目的のデータを探せない。
    */
   it('renders search input and button', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     const inputs = screen.getAllByPlaceholderText('Search conversations...')
     expect(inputs.length).toBeGreaterThanOrEqual(1)
     const buttons = screen.getAllByText('Search')
@@ -75,7 +88,11 @@ describe('DashboardPage', () => {
    * Risk: ユーザーが「データが存在しない」と勘違いし、不要な問い合わせが発生する。
    */
   it('shows loading state initially', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     const loadingTexts = screen.getAllByText('...')
     expect(loadingTexts.length).toBeGreaterThanOrEqual(1)
   })
