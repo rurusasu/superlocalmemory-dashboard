@@ -36,7 +36,8 @@ export default function DashboardPage() {
     const url = q ? `/dashboard/api/conversations?q=${encodeURIComponent(q)}` : '/dashboard/api/conversations'
     const res = await fetch(url)
     const data = await res.json()
-    setConversations(data.conversations || [])
+    const convs = Array.isArray(data.conversations) ? data.conversations : []
+    setConversations(convs)
   }
 
   useEffect(() => { fetchConversations() }, [])
