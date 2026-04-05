@@ -137,6 +137,8 @@ export default function DashboardPage() {
   const statusDot = (val: string, good: string) =>
     val === good ? 'bg-emerald-400' : 'bg-amber-400'
 
+  const tv = (val: string) => t(`value.${val}`) || val
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar activeSection={activeSection} onNavigate={handleNavigate} health={health} />
@@ -183,7 +185,9 @@ export default function DashboardPage() {
                   {t('health.status')}
                 </span>
               </div>
-              <div className="text-lg font-semibold text-gray-100">{health?.status || '...'}</div>
+              <div className="text-lg font-semibold text-gray-100">
+                {health?.status ? tv(health.status) : '...'}
+              </div>
             </div>
 
             <div
@@ -197,7 +201,9 @@ export default function DashboardPage() {
                   {t('health.ollama')}
                 </span>
               </div>
-              <div className="text-lg font-semibold text-gray-100">{health?.ollama || '...'}</div>
+              <div className="text-lg font-semibold text-gray-100">
+                {health?.ollama ? tv(health.ollama) : '...'}
+              </div>
             </div>
 
             <div className={`p-4 rounded-xl border ${statusColor(health?.database || '', 'ok')}`}>
@@ -209,7 +215,9 @@ export default function DashboardPage() {
                   {t('health.database')}
                 </span>
               </div>
-              <div className="text-lg font-semibold text-gray-100">{health?.database || '...'}</div>
+              <div className="text-lg font-semibold text-gray-100">
+                {health?.database ? tv(health.database) : '...'}
+              </div>
             </div>
 
             <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/50">
