@@ -22,7 +22,8 @@ SLM is a memory management system that integrates with Ollama for local LLM infe
 - `SLM_DATA_DIR` — default `/data`
 
 ## Development Notes
-- No test framework is configured yet.
+- **Dashboard tests**: Vitest — run `npm test` in `dashboard/`
+- **Python tests**: pytest — run `python -m pytest tests/ -v` from project root
 - No linter is configured yet.
 - CI/CD: GitHub Actions builds and pushes Docker image to Docker Hub on `main` push.
 - The container runs as non-root user `node` (UID 1000).
