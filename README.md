@@ -1,8 +1,7 @@
 # SuperLocalMemory Dashboard
 
 [![CI](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/ci.yml)
-[![Security Scan](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/security.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/security.yml)
-[![Docker Build](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml)
+[![Docker Build & Publish](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rurusasu/superlocalmemory-dashboard)](https://hub.docker.com/r/rurusasu/superlocalmemory-dashboard)
 [![Docker Image Size](https://img.shields.io/docker/image-size/rurusasu/superlocalmemory-dashboard/latest)](https://hub.docker.com/r/rurusasu/superlocalmemory-dashboard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -57,8 +56,7 @@ Docker containerized Node.js application that serves as a **dashboard and MCP ga
 | Workflow | Trigger | What it does |
 |---|---|---|
 | **CI** | push / PR to `main` | Lint (hadolint · ESLint · Prettier · Ruff) → Test (Vitest · pytest · tsc · build) |
-| **Security** | `v*` tag / weekly | Trivy config scan · Trivy filesystem scan · npm audit · SARIF → GitHub Security |
-| **Docker** | push to `main` / `v*` tag | Build + Smoke test (常時)。`v*` tag のみ Trivy scan → Push to Docker Hub |
+| **Docker** | push to `main` / `v*` tag / weekly | Build + Smoke test (main)。Security + Build → Trivy scan → Push (tag)。Security のみ (weekly) |
 
 ```
 push / PR to main
@@ -70,8 +68,14 @@ push / PR to main
   └─► Docker ─► Build → Smoke Test ─► ✅
 
 v* tag
-  ├─► Security ─► Trivy + npm audit → GitHub Security tab
-  └─► Docker ───► Build → Smoke Test → Trivy Scan → Push
+  └─► Docker ─┬► Security (parallel)  ─┐
+              │  ├ Trivy config         │
+              │  ├ Trivy filesystem     ├─► All pass ─► Push
+              │  └ npm audit            │
+              └► Build → Trivy image ───┘
+
+weekly (Monday 09:00 UTC)
+  └─► Docker ─► Security only → GitHub Security tab
 ```
 
 ---
@@ -284,9 +288,8 @@ See [docs/development.md](docs/development.md) for full development guide.
 ## Security
 
 - Container runs as non-root user `node` (UID 1000)
-- Weekly Trivy scans for vulnerabilities (config, filesystem, image)
-- npm audit on every PR for dependency vulnerabilities
-- SARIF results uploaded to GitHub Security tab
+- `v*` tag リリース時: Trivy (config + filesystem + image) + npm audit が全て通過しないと Docker Hub に push されない
+- Weekly Trivy scans (config + filesystem) + npm audit — SARIF → GitHub Security tab
 - No secrets stored in image — all config via environment variables
 
 ---

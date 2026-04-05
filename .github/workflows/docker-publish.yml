@@ -4,17 +4,85 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  schedule:
+    # Weekly security scan every Monday at 09:00 UTC
+    - cron: "0 9 * * 1"
 
 env:
   IMAGE_NAME: rurusasu/superlocalmemory-dashboard
   IS_TAG: ${{ startsWith(github.ref, 'refs/tags/') }}
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
+  # ── Security (tag + weekly) ───────────────────────
+  trivy-config:
+    name: Trivy Config Scan
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-config.sarif
+          severity: CRITICAL,HIGH
+      - name: Upload to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+  trivy-fs:
+    name: Trivy Filesystem Scan
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+      - name: Upload to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  npm-audit:
+    name: npm audit
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  # ── Build (main push + tag) ──────────────────────
   build:
     name: Build Image
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -63,7 +131,8 @@ jobs:
           path: /tmp/image.tar.gz
           retention-days: 1
 
-  scan:
+  # ── Image scan (tag only, after build) ────────────
+  image-scan:
     name: Trivy Image Scan
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
@@ -74,10 +143,8 @@ jobs:
         with:
           name: docker-image
           path: /tmp
-
       - name: Load image
         run: docker load < /tmp/image.tar.gz
-
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.35.0
         with:
@@ -86,13 +153,12 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "0"
 
+  # ── Push (tag only, after ALL checks pass) ────────
   push:
     name: Push to Docker Hub
-    needs: [build, scan]
+    needs: [trivy-config, trivy-fs, npm-audit, build, image-scan]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
