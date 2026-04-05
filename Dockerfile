@@ -3,7 +3,7 @@
 # Stage 1: Build dashboard
 FROM node:22-bookworm-slim AS dashboard-builder
 WORKDIR /dashboard
-COPY dashboard/package.json dashboard/package-lock.json* ./
+COPY dashboard/package.json dashboard/package-lock.json* dashboard/.npmrc* ./
 RUN npm ci
 COPY dashboard/ .
 RUN npm run build
