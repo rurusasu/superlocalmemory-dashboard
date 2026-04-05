@@ -34,9 +34,16 @@ SLM is a memory management system that integrates with Ollama for local LLM infe
 - **Python**: Ruff (check + format) — `ruff check skills_tools/ tests/` and `ruff format --check skills_tools/ tests/`
 - Ruff config is in `pyproject.toml` (`line-length = 100`, rules: E, F, W, I, UP)
 
+## Versioning
+- **semantic-release** による自動バージョン管理（Conventional Commits ベース）
+- PR タイトルが `feat:` → minor、`fix:` → patch、`feat!:` → major
+- `chore:`, `docs:`, `test:`, `ci:` → リリースなし
+- GitHub は squash merge のみ許可（PR タイトル = コミットメッセージ）
+- 設定: `.releaserc.json`（リポジトリルート）
+
 ## CI/CD (GitHub Actions)
-- **CI** (`ci.yml`): PR to `main` のみ → Lint (hadolint, ESLint, Prettier, Ruff) → Test (Vitest, pytest, tsc, build). Lint jobs run in parallel; test jobs depend on their respective lint jobs passing。マージ後は実行されない。
-- **Docker** (`docker-publish.yml`): 全トリガーで Security (Trivy config/fs, npm audit) を先行実行。push to `main` → Security → Build + Smoke test。`v*` tag → Security → Build + Smoke test → Trivy image scan → Push to Docker Hub。週次スケジュールは Security のみ。
+- **CI** (`ci.yml`): PR to `main` のみ → Lint (hadolint, ESLint, Prettier, Ruff) → Test (Vitest, Playwright, pytest, tsc, build). Lint jobs run in parallel; test jobs depend on their respective lint jobs passing。マージ後は実行されない。
+- **Docker** (`docker-publish.yml`): 全トリガーで Security (Trivy config/fs, npm audit) を先行実行。push to `main` → Security → semantic-release（バージョン計算・タグ・GitHub Release）→ 新バージョンがある場合のみ Build + Smoke test → Trivy image scan → Push to Docker Hub（`vX.Y.Z` + `latest`）。週次スケジュールは Security のみ。
 
 ## Building & Testing the Docker Image
 ```bash
