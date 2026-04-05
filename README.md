@@ -1,7 +1,6 @@
 # SuperLocalMemory Dashboard
 
-[![Tests](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/test.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/test.yml)
-[![Lint](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/lint.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/lint.yml)
+[![CI](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/ci.yml)
 [![Security Scan](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/security.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/security.yml)
 [![Docker Build](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/rurusasu/superlocalmemory-dashboard/actions/workflows/docker-publish.yml)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rurusasu/superlocalmemory-dashboard)](https://hub.docker.com/r/rurusasu/superlocalmemory-dashboard)
@@ -57,15 +56,17 @@ Docker containerized Node.js application that serves as a **dashboard and MCP ga
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| **Tests** | push / PR to `main` | Vitest (dashboard) · pytest + coverage (Python) · TypeScript type check · Next.js build |
-| **Lint** | push / PR to `main` | hadolint (Dockerfile) · ESLint · Ruff (check + format) · Prettier |
+| **CI** | push / PR to `main` | Lint (hadolint · ESLint · Prettier · Ruff) → Test (Vitest · pytest · tsc · build) |
 | **Security** | `v*` tag / weekly | Trivy config scan · Trivy filesystem scan · npm audit · SARIF → GitHub Security |
 | **Docker** | `v*` tag | Build → Smoke test → Trivy image scan → Push to Docker Hub |
 
 ```
 push / PR to main
-  ├─► Tests ──► ✅
-  └─► Lint ───► ✅
+  └─► CI ─► Lint (parallel) ─► Test (parallel) ─► ✅
+            ├ hadolint          ├ Vitest + tsc
+            ├ ESLint            ├ pytest + coverage
+            ├ Prettier          └ Next.js build
+            └ Ruff
 
 v* tag
   ├─► Security ─► Trivy + npm audit → GitHub Security tab
