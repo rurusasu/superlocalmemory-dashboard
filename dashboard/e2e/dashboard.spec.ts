@@ -258,9 +258,9 @@ test.describe('Sidebar', () => {
     await mockAllApis(page)
     await gotoApp(page)
 
-    const dashboardNav = page.getByRole('button', { name: 'ダッシュボード' })
-    const conversationsNav = page.getByRole('button', { name: '会話検索・一覧' })
-    const healthNav = page.getByRole('button', { name: 'システム状態' })
+    const dashboardNav = page.getByRole('button', { name: 'Dashboard' })
+    const conversationsNav = page.getByRole('button', { name: 'Conversations' })
+    const healthNav = page.getByRole('button', { name: 'System Health' })
 
     await expect(dashboardNav).toHaveClass(/bg-blue-600/)
 
@@ -283,8 +283,8 @@ test.describe('Sidebar', () => {
     await gotoApp(page)
 
     const sidebar = page.locator('aside')
-    const toggleButton = sidebar.locator('div.border-t button')
-    const navLabel = page.getByText('ダッシュボード').first()
+    const toggleButton = sidebar.locator('div.p-2 button')
+    const navLabel = sidebar.locator('nav').getByText('Dashboard', { exact: true }).first()
 
     await expect(navLabel).toBeVisible()
     await expect(sidebar).toHaveClass(/w-56/)
@@ -305,8 +305,8 @@ test.describe('Sidebar', () => {
     await gotoApp(page)
 
     const sidebar = page.locator('aside')
-    const toggleButton = sidebar.locator('div.border-t button')
-    const navLabel = page.getByText('ダッシュボード').first()
+    const toggleButton = sidebar.locator('div.p-2 button')
+    const navLabel = sidebar.locator('nav').getByText('Dashboard', { exact: true }).first()
 
     await toggleButton.click()
     await expect(sidebar).toHaveClass(/w-16/)
@@ -385,5 +385,44 @@ test.describe('Responsive layout', () => {
     expect(thirdCardBox).not.toBeNull()
     expect(firstCardBox!.y).toBeCloseTo(secondCardBox!.y, 0)
     expect(thirdCardBox!.y).toBeGreaterThan(firstCardBox!.y)
+  })
+})
+
+test.describe('Settings and language', () => {
+  /**
+   * What: Settings ボタンクリックで Settings モーダルが開き、Close で閉じる。
+   * Why:  Settings パネルはユーザーが言語やシステム情報にアクセスする唯一の手段。
+   * Risk: モーダルの開閉不具合で設定変更が不可能になる。
+   */
+  test('opens and closes Settings modal', async ({ page }) => {
+    await mockAllApis(page)
+    await gotoApp(page)
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await expect(page.getByText('Settings').nth(1)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect(page.getByRole('button', { name: 'Close' })).toBeHidden()
+  })
+
+  /**
+   * What: 言語を日本語に切り替えるとUIテキストが日本語になる。
+   * Why:  i18n の主要機能。言語切り替えが実際に画面に反映されることの検証。
+   * Risk: Context の更新不具合で言語切り替えが反映されない。
+   */
+  test('switches language to Japanese', async ({ page }) => {
+    await mockAllApis(page)
+    await gotoApp(page)
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+
+    const langSelect = page.locator('.fixed select')
+    await langSelect.selectOption('ja')
+
+    await page.getByRole('button', { name: '閉じる' }).click()
+
+    await expect(page.getByRole('button', { name: 'ダッシュボード' })).toBeVisible()
+    await expect(page.getByText('ステータス')).toBeVisible()
+    await expect(page.getByPlaceholder('会話を検索...')).toBeVisible()
   })
 })
