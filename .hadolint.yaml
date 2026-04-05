@@ -9,6 +9,10 @@ ignored:
   - DL3008
   # Allow pip install without version pinning (pinned inline)
   - DL3013
+  # Allow pip install without --require-hashes
+  - DL3042
+  # Allow npm install without version pinning (global tools, always latest)
+  - DL3016
   # Allow consecutive RUN instructions (readability over layer count)
   - DL3059
 

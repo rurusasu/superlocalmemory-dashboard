@@ -50,7 +50,7 @@ jobs:
       - name: Smoke test
         run: |
           TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker run --rm "${TAG}" node -e "console.log('smoke-test: ok')"
+          docker run --rm --entrypoint node "${TAG}" -e "console.log('smoke-test: ok')"
 
       - name: Save image
         if: github.event_name != 'pull_request'

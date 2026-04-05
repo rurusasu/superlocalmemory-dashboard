@@ -17,8 +17,6 @@ Risk if failing:
     - クランプ漏れで負のスコアが発生し、下流の比較ロジックが破綻する
 """
 
-import os
-
 import pytest
 
 
@@ -29,8 +27,10 @@ def _reset_env(monkeypatch):
     monkeypatch.setenv("SKILL_HEALTH_THRESHOLD", "0.7")
     monkeypatch.setenv("SKILL_CORRECTION_PENALTY", "0.05")
     # Re-import to pick up env changes
-    import importlib
-    import skills_tools.health as h
+    import importlib  # noqa: E402
+
+    import skills_tools.health as h  # noqa: E402
+
     importlib.reload(h)
 
 
