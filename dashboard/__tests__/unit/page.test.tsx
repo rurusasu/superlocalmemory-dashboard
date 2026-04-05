@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import DashboardPage from '@/app/page'
+import { LocaleProvider } from '@/app/i18n/LocaleContext'
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -34,7 +35,11 @@ describe('DashboardPage', () => {
    * Risk: タイトルが消え、ユーザーがどのページにいるか分からなくなる。
    */
   it('renders the dashboard heading', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('SLM Dashboard')
   })
 
@@ -45,7 +50,11 @@ describe('DashboardPage', () => {
    * Risk: カードが欠落してOllama切断やDB消失に気づけず、対応が遅れる。
    */
   it('renders all six health status cards', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Ollama').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Database').length).toBeGreaterThanOrEqual(1)
@@ -55,17 +64,21 @@ describe('DashboardPage', () => {
   })
 
   /**
-   * What: 検索テキスト入力欄と Search ボタンが描画される。
-   * Why:  会話データの検索はダッシュボードの主要機能。
-   *       UIが欠落すると検索機能自体が使用不能になる。
-   * Risk: 検索機能にアクセスできず、大量の会話データから目的のデータを探せない。
+   * What: Dashboard と Conversations のナビゲーションボタンが描画される。
+   * Why:  タブ切り替えはダッシュボードの主要ナビゲーション。
+   *       ボタンが欠落するとユーザーが画面を切り替えられない。
+   * Risk: ナビゲーションが表示されず、会話検索画面にアクセスできない。
    */
-  it('renders search input and button', () => {
-    render(<DashboardPage />)
-    const inputs = screen.getAllByPlaceholderText('Search conversations...')
-    expect(inputs.length).toBeGreaterThanOrEqual(1)
-    const buttons = screen.getAllByText('Search')
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+  it('renders navigation buttons for tab switching', () => {
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
+    const dashboardButtons = screen.getAllByText('Dashboard')
+    expect(dashboardButtons.length).toBeGreaterThanOrEqual(1)
+    const conversationsButtons = screen.getAllByText('Conversations')
+    expect(conversationsButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   /**
@@ -75,7 +88,11 @@ describe('DashboardPage', () => {
    * Risk: ユーザーが「データが存在しない」と勘違いし、不要な問い合わせが発生する。
    */
   it('shows loading state initially', () => {
-    render(<DashboardPage />)
+    render(
+      <LocaleProvider>
+        <DashboardPage />
+      </LocaleProvider>,
+    )
     const loadingTexts = screen.getAllByText('...')
     expect(loadingTexts.length).toBeGreaterThanOrEqual(1)
   })

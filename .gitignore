@@ -6,3 +6,7 @@ __pycache__/
 superlocalmemory-*.tgz
 node_modules/
 .claude/settings.local.json
+.aidesigner/*
+!.aidesigner/.gitkeep
+.playwright-mcp/
+*.png
