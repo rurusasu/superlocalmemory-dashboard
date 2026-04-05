@@ -64,21 +64,21 @@ describe('DashboardPage', () => {
   })
 
   /**
-   * What: 検索テキスト入力欄と Search ボタンが描画される。
-   * Why:  会話データの検索はダッシュボードの主要機能。
-   *       UIが欠落すると検索機能自体が使用不能になる。
-   * Risk: 検索機能にアクセスできず、大量の会話データから目的のデータを探せない。
+   * What: Dashboard と Conversations のナビゲーションボタンが描画される。
+   * Why:  タブ切り替えはダッシュボードの主要ナビゲーション。
+   *       ボタンが欠落するとユーザーが画面を切り替えられない。
+   * Risk: ナビゲーションが表示されず、会話検索画面にアクセスできない。
    */
-  it('renders search input and button', () => {
+  it('renders navigation buttons for tab switching', () => {
     render(
       <LocaleProvider>
         <DashboardPage />
       </LocaleProvider>,
     )
-    const inputs = screen.getAllByPlaceholderText('Search conversations...')
-    expect(inputs.length).toBeGreaterThanOrEqual(1)
-    const buttons = screen.getAllByText('Search')
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    const dashboardButtons = screen.getAllByText('Dashboard')
+    expect(dashboardButtons.length).toBeGreaterThanOrEqual(1)
+    const conversationsButtons = screen.getAllByText('Conversations')
+    expect(conversationsButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   /**
