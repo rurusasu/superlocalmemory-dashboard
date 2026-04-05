@@ -1,4 +1,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 superlocalmemory-*.tgz
+node_modules/

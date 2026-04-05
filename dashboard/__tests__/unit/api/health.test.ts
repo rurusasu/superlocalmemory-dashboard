@@ -16,14 +16,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockExecSync, mockExistsSync } = vi.hoisted(() => ({
-  mockExecSync: vi.fn(),
+const { mockExecFileSync, mockExistsSync } = vi.hoisted(() => ({
+  mockExecFileSync: vi.fn(),
   mockExistsSync: vi.fn(),
 }))
 
 vi.mock('child_process', () => ({
-  default: { execSync: mockExecSync },
-  execSync: mockExecSync,
+  default: { execFileSync: mockExecFileSync },
+  execFileSync: mockExecFileSync,
 }))
 
 vi.mock('fs', () => ({
@@ -31,10 +31,16 @@ vi.mock('fs', () => ({
   existsSync: mockExistsSync,
 }))
 
-import { GET } from '@/app/api/health/route'
+vi.mock('@/lib/metrics', () => ({
+  ollamaConnectionStatus: { set: vi.fn() },
+  databaseStatus: { set: vi.fn() },
+}))
+
+import { GET, resetHealthCache } from '@/app/api/health/route'
 
 beforeEach(() => {
   vi.resetAllMocks()
+  resetHealthCache()
 })
 
 describe('GET /api/health', () => {
@@ -44,7 +50,7 @@ describe('GET /api/health', () => {
    * Risk: 正常稼働中にユーザーが「異常」と誤認し、不要な調査・再起動を行う。
    */
   it('returns healthy when Ollama is connected and DB exists', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('128M\t/data/.superlocalmemory'))
+    mockExecFileSync.mockReturnValue(Buffer.from('128M\t/data/.superlocalmemory'))
     mockExistsSync.mockReturnValue(true)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
 
@@ -66,7 +72,7 @@ describe('GET /api/health', () => {
    *       または disconnected を検出できず、LLM機能の障害を見逃す。
    */
   it('returns degraded when Ollama is disconnected', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('128M\t/data/.superlocalmemory'))
+    mockExecFileSync.mockReturnValue(Buffer.from('128M\t/data/.superlocalmemory'))
     mockExistsSync.mockReturnValue(true)
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('connection refused')))
 
@@ -85,7 +91,7 @@ describe('GET /api/health', () => {
    * Risk: DBの欠損を検出できず、データ操作時に初めてエラーが発覚する。
    */
   it('returns degraded when DB is missing', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('0\t-'))
+    mockExecFileSync.mockReturnValue(Buffer.from('0\t-'))
     mockExistsSync.mockReturnValue(false)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
 
@@ -103,7 +109,7 @@ describe('GET /api/health', () => {
    * Risk: 例外が伝播してAPIが500を返し、ヘルスチェック全体が機能しなくなる。
    */
   it('returns unknown disk usage when du command fails', async () => {
-    mockExecSync.mockImplementation(() => {
+    mockExecFileSync.mockImplementation(() => {
       throw new Error('command failed')
     })
     mockExistsSync.mockReturnValue(true)
@@ -122,7 +128,7 @@ describe('GET /api/health', () => {
    * Risk: "connected" と "error" を区別できず、障害の切り分けが困難になる。
    */
   it('returns error ollama status when response is not ok', async () => {
-    mockExecSync.mockReturnValue(Buffer.from('0\t-'))
+    mockExecFileSync.mockReturnValue(Buffer.from('0\t-'))
     mockExistsSync.mockReturnValue(false)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 

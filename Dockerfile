@@ -69,6 +69,9 @@ USER node
 WORKDIR /app
 EXPOSE 3000 3002
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD node -e "fetch('http://localhost:3002/api/healthz').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
+
 COPY --chown=node:node entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

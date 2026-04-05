@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+log() {
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] [SLM] $*"
+}
+
+log_error() {
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] [SLM] ERROR: $*" >&2
+}
+
 # Configure SLM for Mode B (Ollama)
 export SLM_MODE="${SLM_MODE:-b}"
 export OLLAMA_HOST="${OLLAMA_HOST:-http://ollama:11434}"
 export SLM_DATA_DIR="${SLM_DATA_DIR:-/data}"
+
+log "Starting with SLM_MODE=$SLM_MODE, OLLAMA_HOST=$OLLAMA_HOST, SLM_DATA_DIR=$SLM_DATA_DIR"
 
 # SLM hardcodes Path.home() / ".superlocalmemory" as base_dir.
 # Symlink ~/.superlocalmemory → /data/.superlocalmemory so DB lives on PVC.
@@ -14,7 +24,7 @@ mkdir -p "$SLM_HOME"
 if [ ! -L "$REAL_HOME/.superlocalmemory" ]; then
   rm -rf "$REAL_HOME/.superlocalmemory"
   ln -sf "$SLM_HOME" "$REAL_HOME/.superlocalmemory"
-  echo "[SLM] Symlinked $REAL_HOME/.superlocalmemory → $SLM_HOME"
+  log "Symlinked $REAL_HOME/.superlocalmemory → $SLM_HOME"
 fi
 
 # Initialize SLM: bypass interactive wizard by creating config.json + DB directly.
@@ -34,7 +44,7 @@ config_path = os.path.join(slm_home, 'config.json')
 # Create or update config.json
 if os.path.exists(config_path):
     with open(config_path) as f: cfg = json.load(f)
-    print('[SLM] Updating existing config.json...')
+    print('[SLM] Updating existing config.json')
 else:
     cfg = {
         'mode': 'a',
@@ -66,27 +76,27 @@ print(f'[SLM] config.json ready: mode={cfg[\"mode\"]}, provider={cfg[\"llm\"][\"
 
 # Create memory.db via SLM's own init if missing (use load_or_create)
 if [ ! -f "$SLM_HOME/memory.db" ]; then
-  echo "[SLM] Creating database..."
+  log "Creating database..."
   python3 -c "
 from superlocalmemory.core.config import SLMConfig
 cfg = SLMConfig.load_or_create()
 print(f'[SLM] Database created at {cfg.db_path}')
-" || echo "[SLM] Warning: DB auto-create failed. Check PVC mount permissions and disk space at $SLM_DATA_DIR. slm mcp may self-heal on start."
+" || log_error "DB auto-create failed. Check PVC mount permissions and disk space at $SLM_DATA_DIR. slm mcp may self-heal on start."
 fi
 
 # Create openclaw profile if not exists
-slm profile create openclaw 2>&1 || echo "[SLM] profile 'openclaw' may already exist"
+slm profile create openclaw 2>&1 || log "profile 'openclaw' may already exist"
 slm profile switch openclaw 2>&1 || {
-  echo "[SLM] FATAL: cannot switch profile" >&2
+  log_error "FATAL: cannot switch profile"
   exit 1
 }
 
-echo "[SLM] Status:"
-slm status 2>&1 || echo "[SLM] Warning: status check returned error"
+log "Status:"
+slm status 2>&1 || log_error "status check returned error"
 
 # Dashboard startup
-echo "[SLM] Starting dashboard on port 3002..."
+log "Starting dashboard on port 3002..."
 PORT=3002 HOSTNAME=0.0.0.0 node /app/dashboard/server.js &
 
-echo "[SLM] Starting MCP server on port 3000 via supergateway (Mode $SLM_MODE)..."
+log "Starting MCP server on port 3000 via supergateway (Mode $SLM_MODE)..."
 exec npx -y supergateway --stdio "slm mcp" --outputTransport streamableHttp --port 3000 --host 0.0.0.0
