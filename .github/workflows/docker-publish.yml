@@ -98,7 +98,16 @@ jobs:
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: |
+          OUTPUT=$(npx semantic-release 2>&1) || true
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "Published release"; then
+            VERSION=$(echo "$OUTPUT" | grep -oP "Published release \K[0-9]+\.[0-9]+\.[0-9]+")
+            echo "new-release-published=true" >> "$GITHUB_OUTPUT"
+            echo "new-release-version=$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "new-release-published=false" >> "$GITHUB_OUTPUT"
+          fi
         working-directory: dashboard
 
   # ── 3. Build — after release (new version only) ─
