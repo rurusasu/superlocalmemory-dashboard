@@ -414,6 +414,12 @@ test.describe('Settings and language', () => {
     await mockAllApis(page)
     await gotoApp(page)
 
+    // Verify English status values before switching
+    const healthSection = page.locator('#section-health')
+    await expect(healthSection.getByText('healthy')).toBeVisible()
+    await expect(healthSection.getByText('connected')).toBeVisible()
+    await expect(healthSection.getByText('ok')).toBeVisible()
+
     await page.getByRole('button', { name: 'Settings' }).click()
 
     const langSelect = page.locator('.fixed select')
@@ -421,8 +427,12 @@ test.describe('Settings and language', () => {
 
     await page.getByRole('button', { name: '閉じる' }).click()
 
+    // Verify nav labels translated
     await expect(page.getByRole('button', { name: 'ダッシュボード' })).toBeVisible()
-    await expect(page.getByText('ステータス')).toBeVisible()
     await expect(page.getByPlaceholder('会話を検索...')).toBeVisible()
+
+    // Verify status values translated
+    await expect(healthSection.getByText('正常').first()).toBeVisible()
+    await expect(healthSection.getByText('接続済み')).toBeVisible()
   })
 })
