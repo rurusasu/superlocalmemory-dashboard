@@ -2,7 +2,6 @@ name: Docker Build & Publish
 
 on:
   push:
-    branches: [main]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -23,7 +22,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -53,13 +52,13 @@ jobs:
           docker run --rm --entrypoint node "${TAG}" -e "console.log('smoke-test: ok')"
 
       - name: Save image
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
           docker save "${TAG}" | gzip > /tmp/image.tar.gz
 
       - name: Upload image artifact
-        if: github.event_name != 'pull_request'
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -69,7 +68,7 @@ jobs:
   scan:
     name: Trivy Image Scan
     needs: build
-    if: github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - name: Download image artifact
@@ -92,7 +91,7 @@ jobs:
   push:
     name: Push to Docker Hub
     needs: [build, scan]
-    if: github.event_name != 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: read
