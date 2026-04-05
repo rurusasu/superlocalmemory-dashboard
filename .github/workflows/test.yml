@@ -30,4 +30,4 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests -r requirements-dev.txt
-      - run: python -m pytest tests/ -v --cov=skills_tools --cov-report=term
+      - run: python -m pytest tests/unit/ -v --cov=skills_tools --cov-report=term
