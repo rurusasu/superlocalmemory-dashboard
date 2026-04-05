@@ -10,6 +10,7 @@ on:
 
 env:
   IMAGE_NAME: rurusasu/superlocalmemory-dashboard
+  TRIVY_VERSION: 0.62.3
 
 permissions:
   contents: read
@@ -22,15 +23,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v${{ env.TRIVY_VERSION }}
       - name: Run Trivy config scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          scan-type: config
-          scan-ref: .
-          format: sarif
-          output: trivy-config.sarif
-          severity: CRITICAL,HIGH
-          cache: "false"
+        run: |
+          trivy config --format sarif --output trivy-config.sarif \
+            --severity CRITICAL,HIGH .
       - name: Upload to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
@@ -43,15 +43,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v${{ env.TRIVY_VERSION }}
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: sarif
-          output: trivy-fs.sarif
-          severity: CRITICAL,HIGH
-          cache: "false"
+        run: |
+          trivy fs --format sarif --output trivy-fs.sarif \
+            --severity CRITICAL,HIGH .
       - name: Upload to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: always()
@@ -138,14 +137,14 @@ jobs:
           path: /tmp
       - name: Load image
         run: docker load < /tmp/image.tar.gz
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v${{ env.TRIVY_VERSION }}
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          input: /tmp/image.tar.gz
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: "0"
-          cache: "false"
+        run: |
+          trivy image --format table --severity CRITICAL,HIGH \
+            --exit-code 0 --input /tmp/image.tar.gz
 
   # ── 4. Push (tag only, after ALL pass) ────────────
   push:
