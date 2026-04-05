@@ -58,15 +58,16 @@ Docker containerized Node.js application that serves as a **dashboard and MCP ga
 |---|---|---|
 | **CI** | push / PR to `main` | Lint (hadolint · ESLint · Prettier · Ruff) → Test (Vitest · pytest · tsc · build) |
 | **Security** | `v*` tag / weekly | Trivy config scan · Trivy filesystem scan · npm audit · SARIF → GitHub Security |
-| **Docker** | `v*` tag | Build → Smoke test → Trivy image scan → Push to Docker Hub |
+| **Docker** | push to `main` / `v*` tag | Build + Smoke test (常時)。`v*` tag のみ Trivy scan → Push to Docker Hub |
 
 ```
 push / PR to main
-  └─► CI ─► Lint (parallel) ─► Test (parallel) ─► ✅
-            ├ hadolint          ├ Vitest + tsc
-            ├ ESLint            ├ pytest + coverage
-            ├ Prettier          └ Next.js build
-            └ Ruff
+  ├─► CI ─────► Lint (parallel) ─► Test (parallel) ─► ✅
+  │             ├ hadolint          ├ Vitest + tsc
+  │             ├ ESLint            ├ pytest + coverage
+  │             ├ Prettier          └ Next.js build
+  │             └ Ruff
+  └─► Docker ─► Build → Smoke Test ─► ✅
 
 v* tag
   ├─► Security ─► Trivy + npm audit → GitHub Security tab

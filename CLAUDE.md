@@ -37,7 +37,7 @@ SLM is a memory management system that integrates with Ollama for local LLM infe
 ## CI/CD (GitHub Actions)
 - **CI** (`ci.yml`): push/PR to `main` → Lint (hadolint, ESLint, Prettier, Ruff) → Test (Vitest, pytest, tsc, build). Lint jobs run in parallel; test jobs depend on their respective lint jobs passing.
 - **Security** (`security.yml`): `v*` tag + weekly schedule → Trivy config/filesystem scan, npm audit, SARIF → GitHub Security tab.
-- **Docker** (`docker-publish.yml`): `v*` tag only → Build → Smoke test → Trivy image scan → Push to Docker Hub. Does NOT run on push to main or PRs.
+- **Docker** (`docker-publish.yml`): push to `main` → Build + Smoke test のみ。`v*` tag → Build + Smoke test → Trivy image scan → Push to Docker Hub。
 
 ## Building & Testing the Docker Image
 ```bash
