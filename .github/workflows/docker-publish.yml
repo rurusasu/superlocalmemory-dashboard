@@ -3,7 +3,6 @@ name: Docker Build & Publish
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   schedule:
     # Weekly security scan every Monday at 09:00 UTC
     - cron: "0 9 * * 1"
@@ -13,7 +12,7 @@ env:
   TRIVY_VERSION: 0.69.3
 
 permissions:
-  contents: read
+  contents: write
   security-events: write
 
 jobs:
@@ -75,14 +74,43 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-  # ── 2. Build — after security passes (push only) ─
-  build:
-    name: Build Image
+  # ── 2. Release — semantic-release (push only) ───
+  release:
+    name: Semantic Release
     needs: [trivy-config, trivy-fs, npm-audit]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      new-release: ${{ steps.release.outputs.new-release-published }}
+      version: ${{ steps.release.outputs.new-release-version }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: cd dashboard && npm ci
+      - name: Run semantic-release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+        working-directory: dashboard
+
+  # ── 3. Build — after release (new version only) ─
+  build:
+    name: Build Image
+    needs: release
+    if: needs.release.outputs.new-release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: docker/setup-buildx-action@v4
 
       - name: Docker meta
@@ -91,10 +119,8 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=
+            type=raw,value=latest
+            type=raw,value=v${{ needs.release.outputs.version }}
 
       - uses: docker/build-push-action@v7
         with:
@@ -106,28 +132,26 @@ jobs:
 
       - name: Smoke test
         run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker run --rm --entrypoint node "${TAG}" -e "console.log('smoke-test: ok')"
+          docker run --rm --entrypoint node \
+            "${{ env.IMAGE_NAME }}:v${{ needs.release.outputs.version }}" \
+            -e "console.log('smoke-test: ok')"
 
       - name: Save image
-        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
-          docker save "${TAG}" | gzip > /tmp/image.tar.gz
+          docker save "${{ env.IMAGE_NAME }}:v${{ needs.release.outputs.version }}" \
+            | gzip > /tmp/image.tar.gz
 
       - name: Upload image artifact
-        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v5
         with:
           name: docker-image
           path: /tmp/image.tar.gz
           retention-days: 1
 
-  # ── 3. Image scan — built image (tag only) ───────
+  # ── 4. Image scan ───────────────────────────────
   image-scan:
     name: Trivy Image Scan
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [release, build]
     runs-on: ubuntu-latest
     steps:
       - name: Download image artifact
@@ -146,14 +170,15 @@ jobs:
           trivy image --format table --severity CRITICAL,HIGH \
             --exit-code 0 --input /tmp/image.tar.gz
 
-  # ── 4. Push (tag only, after ALL pass) ────────────
+  # ── 5. Push to Docker Hub ───────────────────────
   push:
     name: Push to Docker Hub
-    needs: [build, image-scan]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [release, build, image-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: docker/setup-buildx-action@v4
 
       - uses: docker/login-action@v4
@@ -168,8 +193,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=v${{ needs.release.outputs.version }}
 
       - uses: docker/build-push-action@v7
         with:
