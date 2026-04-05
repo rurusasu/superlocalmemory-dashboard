@@ -10,7 +10,7 @@ on:
 
 env:
   IMAGE_NAME: rurusasu/superlocalmemory-dashboard
-  TRIVY_VERSION: 0.62.3
+  TRIVY_VERSION: 0.69.3
 
 permissions:
   contents: read
